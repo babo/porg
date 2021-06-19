@@ -1,7 +1,7 @@
 use chrono::{DateTime, Datelike, Utc};
+use std::collections::HashSet;
 use std::fs;
 use structopt::StructOpt;
-use std::collections::HashSet;
 
 #[derive(StructOpt)]
 struct Cli {
@@ -16,6 +16,36 @@ struct Cli {
 
     #[structopt(parse(from_os_str))]
     to: std::path::PathBuf,
+}
+
+struct Config {
+    destination: std::path::PathBuf,
+    dry: bool,
+    image_extensions: HashSet<String>,
+    other_extensions: HashSet<String>,
+    folders_to_skip: HashSet<String>,
+}
+
+impl Config {
+    pub fn new(
+        destination: std::path::PathBuf,
+        image: &str,
+        other: &str,
+        folders: &str,
+        dry: bool,
+    ) -> Self {
+        let image_extensions = image.split('|').map(|x| x.to_string()).collect();
+        let other_extensions = other.split('|').map(|x| x.to_string()).collect();
+        let folders_to_skip = folders.split('|').map(|x| x.to_string()).collect();
+
+        Config {
+            destination,
+            dry,
+            image_extensions,
+            other_extensions,
+            folders_to_skip,
+        }
+    }
 }
 
 fn main() {
@@ -38,12 +68,18 @@ fn main() {
         }
     }
 
-    let known_extensions: HashSet<&'static str> = "awf arw bmp cr2 heic jpg jpeg mov mp4 mts nef png raf rw2 srw tif tiff x3f".split(' ').collect();
+    let config = Config::new(
+        args.to,
+        "afphoto|awf|arw|bmp|cr2|heic|jpg|jpeg|mov|mp4|mts|nef|png|raf|rw2|srw|tif|tiff|x3f",
+        "comask|exposurex6|cocatalogdb|backup|backup 1",
+        "com.apple.mediaanalysisd|caches|database|com.apple.photoanalysisda|Cache|Thumbnails|resources|com.apple.mediaanalysisd|resources|private",
+        args.dry,
+    );
 
-    process(args.from, &args.to, &known_extensions, &args.dry);
+    process(args.from, &config);
 }
 
-fn process(source: std::path::PathBuf, dest: &std::path::PathBuf, known_extensions: &HashSet<&'static str>, dry: &bool) {
+fn process(source: std::path::PathBuf, config: &Config) {
     if !source.exists() {
         panic!("Source doesn't exist: {}", source.display())
     }
@@ -54,49 +90,50 @@ fn process(source: std::path::PathBuf, dest: &std::path::PathBuf, known_extensio
             .expect(&format!("read_dir failed at {}", source.display()))
         {
             if let Ok(entry) = entry {
-                if entry
-                    .file_name()
-                    .to_str()
-                    .and_then(|x| Some(x.starts_with(".")))
-                    == Some(false)
-                {
-                    process(entry.path(), dest, known_extensions, dry)
+                let filename = entry.file_name().to_str().unwrap().to_string();
+                if !filename.starts_with(".") && !config.folders_to_skip.contains(&filename) {
+                    process(entry.path(), config)
+                } else {
+                    println!("Skip {}", &filename)
                 }
             }
         }
     } else if source.is_file() {
-        let extension = source.extension();
-        if extension.is_some() {
-            extension.map(|x| {
-                if let Some(ext) = x.to_ascii_lowercase().to_str() {
-                    if !known_extensions.contains(ext) {
-                        println!("{}", source.display())
+        let ext = source
+            .extension()
+            .map(|x| x.to_ascii_lowercase().to_str().map(|x| Some(x.to_string())))
+            .flatten()
+            .flatten();
+        if ext.is_some() {
+            let ext = String::from(ext.unwrap());
+
+            if config.image_extensions.contains(&ext) {
+                if let Ok(created) = source.metadata().and_then(|x| x.created()) {
+                    let dt = DateTime::<Utc>::from(created);
+                    let mut pathname = config.destination.clone();
+                    pathname.push(dt.year().to_string());
+                    pathname.push(dt.month().to_string());
+                    pathname.push(dt.day().to_string());
+                    if !pathname.exists() && !config.dry {
+                        fs::create_dir_all(pathname.as_path())
+                            .expect(&format!("Unable to create {}", pathname.display()));
+                    }
+                    pathname.push(source.file_name().unwrap());
+                    if !pathname.exists() {
+                        if !config.dry {
+                            fs::copy(&source, &pathname).expect(&format!(
+                                "Unable to copy {} -> {}",
+                                source.display(),
+                                pathname.display()
+                            ));
+                            println!("copy {}", source.display())
+                        }
+                    } else {
+                        println!("skip {}", source.display())
                     }
                 }
-            });
-            if let Ok(created) = source.metadata().and_then(|x| x.created()) {
-                let dt = DateTime::<Utc>::from(created);
-                let mut pathname = dest.clone();
-                pathname.push(dt.year().to_string());
-                pathname.push(dt.month().to_string());
-                pathname.push(dt.day().to_string());
-                if !pathname.exists() && !dry {
-                    fs::create_dir_all(pathname.as_path())
-                        .expect(&format!("Unable to create {}", pathname.display()));
-                }
-                pathname.push(source.file_name().unwrap());
-                if !pathname.exists() {
-                    if !dry {
-                        fs::copy(&source, &pathname).expect(&format!(
-                            "Unable to copy {} -> {}",
-                            source.display(),
-                            pathname.display()
-                        ));
-                        println!("copy {}", source.display())
-                    }
-                } else {
-                    println!("skip {}", source.display())
-                }
+            } else if config.other_extensions.contains(&ext) == false {
+                println!("Unknown {}", ext)
             }
         }
     }
