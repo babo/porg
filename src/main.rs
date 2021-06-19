@@ -24,6 +24,7 @@ struct Config {
     image_extensions: HashSet<String>,
     other_extensions: HashSet<String>,
     folders_to_skip: HashSet<String>,
+    min_size: u64,
 }
 
 impl Config {
@@ -33,6 +34,7 @@ impl Config {
         other: &str,
         folders: &str,
         dry: bool,
+        min_size: u64,
     ) -> Self {
         let image_extensions = image.split('|').map(|x| x.to_string()).collect();
         let other_extensions = other.split('|').map(|x| x.to_string()).collect();
@@ -44,6 +46,7 @@ impl Config {
             image_extensions,
             other_extensions,
             folders_to_skip,
+            min_size,
         }
     }
 }
@@ -74,6 +77,7 @@ fn main() {
         "comask|exposurex6|cocatalogdb|backup|backup 1",
         "com.apple.mediaanalysisd|caches|database|com.apple.photoanalysisda|Cache|Thumbnails|resources|com.apple.mediaanalysisd|resources|private",
         args.dry,
+        40960,
     );
 
     process(args.from, &config);
@@ -108,6 +112,15 @@ fn process(source: std::path::PathBuf, config: &Config) {
             let ext = String::from(ext.unwrap());
 
             if config.image_extensions.contains(&ext) {
+                let size_of = source
+                    .metadata()
+                    .expect(&format!("Len expected {}", source.display()))
+                    .len();
+
+                if size_of < config.min_size {
+                    println!("Size is too small {} {}", source.display(), size_of);
+                    return;
+                }
                 if let Ok(created) = source.metadata().and_then(|x| x.created()) {
                     let dt = DateTime::<Utc>::from(created);
                     let mut pathname = config.destination.clone();
