@@ -125,8 +125,8 @@ fn process(source: std::path::PathBuf, config: &Config) {
                     let dt = DateTime::<Utc>::from(created);
                     let mut pathname = config.destination.clone();
                     pathname.push(dt.year().to_string());
-                    pathname.push(dt.month().to_string());
-                    pathname.push(dt.day().to_string());
+                    pathname.push(format!("{:02}", dt.month()));
+                    pathname.push(format!("{:02}", dt.day()));
                     if !pathname.exists() && !config.dry {
                         fs::create_dir_all(pathname.as_path())
                             .expect(&format!("Unable to create {}", pathname.display()));
