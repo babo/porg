@@ -12,19 +12,19 @@ struct Cli {
     create: bool,
 
     #[structopt(parse(from_os_str))]
-    from: std::path::PathBuf,
+    src: std::path::PathBuf,
 
     #[structopt(parse(from_os_str))]
-    to: std::path::PathBuf,
+    dst: std::path::PathBuf,
 }
 
 struct Config {
     destination: std::path::PathBuf,
-    dry: bool,
     image_extensions: HashSet<String>,
     other_extensions: HashSet<String>,
     folders_to_skip: HashSet<String>,
     min_size: u64,
+    dry: bool,
 }
 
 impl Config {
@@ -54,25 +54,25 @@ impl Config {
 fn main() {
     let args = Cli::from_args();
 
-    if args.to.exists() {
-        if !args.to.is_dir() {
-            panic!("Destination is not a directory {}", args.to.display())
+    if args.dst.exists() {
+        if !args.dst.is_dir() {
+            panic!("Destination is not a directory {}", args.dst.display())
         }
     } else {
         if args.create == false {
             panic!(
                 "Destination doesn't exist and create is not enabled {}",
-                args.to.display()
+                args.dst.display()
             );
         }
         if !args.dry {
-            fs::create_dir_all(args.to.as_path())
-                .expect(&format!("Unable to create {}", args.to.display()));
+            fs::create_dir_all(args.dst.as_path())
+                .expect(&format!("Unable to create {}", args.dst.display()));
         }
     }
 
     let config = Config::new(
-        args.to,
+        args.dst,
         "afphoto|ai|awi|awf|arw|bmp|cr2|dng|heic|jpg|jpeg|mov|mp4|mts|nef|orf|png|psd|raf|rw2|srw|tif|tiff|x3f",
         "comask|exposurex6|cocatalogdb|backup|backup 1|doc|xls",
         "com.apple.mediaanalysisd|caches|database|com.apple.photoanalysisda|Cache|Thumbnails|resources|com.apple.mediaanalysisd|resources|private|Previews",
@@ -80,7 +80,7 @@ fn main() {
         40960,
     );
 
-    process(args.from, &config);
+    process(args.src, &config);
 }
 
 fn process(source: std::path::PathBuf, config: &Config) {
