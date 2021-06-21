@@ -73,7 +73,7 @@ fn main() {
 
     let config = Config::new(
         args.to,
-        "afphoto|awi|awf|arw|bmp|cr2|dng|heic|jpg|jpeg|mov|mp4|mts|nef|orf|png|raf|rw2|srw|tif|tiff|x3f",
+        "afphoto|ai|awi|awf|arw|bmp|cr2|dng|heic|jpg|jpeg|mov|mp4|mts|nef|orf|png|psd|raf|rw2|srw|tif|tiff|x3f",
         "comask|exposurex6|cocatalogdb|backup|backup 1|doc|xls",
         "com.apple.mediaanalysisd|caches|database|com.apple.photoanalysisda|Cache|Thumbnails|resources|com.apple.mediaanalysisd|resources|private|Previews",
         args.dry,
