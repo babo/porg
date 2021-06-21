@@ -54,6 +54,10 @@ impl Config {
 fn main() {
     let args = Cli::from_args();
 
+    if !args.src.exists() {
+        panic!("Source doesn't exist: {}", args.src.display())
+    }
+
     if args.dst.exists() {
         if !args.dst.is_dir() {
             panic!("Destination is not a directory {}", args.dst.display())
@@ -84,10 +88,6 @@ fn main() {
 }
 
 fn process(source: std::path::PathBuf, config: &Config) {
-    if !source.exists() {
-        panic!("Source doesn't exist: {}", source.display())
-    }
-
     if source.is_dir() {
         for entry in source
             .read_dir()
@@ -95,10 +95,10 @@ fn process(source: std::path::PathBuf, config: &Config) {
         {
             if let Ok(entry) = entry {
                 let filename = entry.file_name().to_str().unwrap().to_string();
-                if !filename.starts_with(".") && !config.folders_to_skip.contains(&filename) {
-                    process(entry.path(), config)
-                } else {
+                if filename.starts_with(".") || config.folders_to_skip.contains(&filename) {
                     println!("Skip {}", &filename)
+                } else {
+                    process(entry.path(), config)
                 }
             }
         }
@@ -109,7 +109,7 @@ fn process(source: std::path::PathBuf, config: &Config) {
             .flatten()
             .flatten();
         if ext.is_some() {
-            let ext = String::from(ext.unwrap());
+            let ext = ext.unwrap();
 
             if config.image_extensions.contains(&ext) {
                 let size_of = source
@@ -127,7 +127,7 @@ fn process(source: std::path::PathBuf, config: &Config) {
                     pathname.push(dt.year().to_string());
                     pathname.push(format!("{:02}", dt.month()));
                     pathname.push(format!("{:02}", dt.day()));
-                    if !pathname.exists() && !config.dry {
+                    if !config.dry && !pathname.exists() {
                         fs::create_dir_all(pathname.as_path())
                             .expect(&format!("Unable to create {}", pathname.display()));
                     }
@@ -139,10 +139,10 @@ fn process(source: std::path::PathBuf, config: &Config) {
                                 source.display(),
                                 pathname.display()
                             ));
-                            println!("copy {}", source.display())
+                            println!("Copy {} {}", source.display(), pathname.display())
                         }
                     } else {
-                        println!("skip {}", source.display())
+                        println!("Skip {}", source.display())
                     }
                 }
             } else if config.other_extensions.contains(&ext) == false {
