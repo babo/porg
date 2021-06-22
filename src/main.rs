@@ -1,6 +1,8 @@
 use chrono::{DateTime, Datelike, Utc};
 use std::collections::HashSet;
 use std::fs;
+use std::os::unix::fs::MetadataExt;
+use std::time::{Duration, SystemTime};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -121,7 +123,10 @@ fn process(source: std::path::PathBuf, config: &Config) {
                     println!("Size is too small {} {}", source.display(), size_of);
                     return;
                 }
-                if let Ok(created) = source.metadata().and_then(|x| x.created()) {
+                if let Ok(created) = source.metadata().and_then(|x| match x.created() {
+                    Ok(created) => Ok(created),
+                    _ => Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(x.ctime() as u64)),
+                }) {
                     let dt = DateTime::<Utc>::from(created);
                     let mut pathname = config.destination.clone();
                     pathname.push(dt.year().to_string());
