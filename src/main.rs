@@ -79,9 +79,9 @@ fn main() {
 
     let config = Config::new(
         args.dst,
-        "afphoto|ai|awi|awf|arw|bmp|cr2|dng|heic|jpg|jpeg|mov|mp4|mts|nef|orf|png|psd|raf|rw2|srw|tif|tiff|x3f",
-        "comask|exposurex6|cocatalogdb|backup|backup 1|doc|xls",
-        "com.apple.mediaanalysisd|caches|database|com.apple.photoanalysisda|Cache|Thumbnails|resources|com.apple.mediaanalysisd|resources|private|Previews",
+        "afphoto|ai|arw|awf|awi|bmp|cr2|dng|heic|jpeg|jpg|mov|mp4|mts|nef|orf|pef|png|psd|raf|rw2|srw|tif|tiff|x3f",
+        "backup|backup 1|cocatalogdb|comask|db|doc|exposurex6|xls|xmp",
+        "Cache|Previews|Thumbnails|Thumbs.db|caches|com.apple.mediaanalysisd|com.apple.photoanalysisda|database|private|resources",
         args.dry,
         10240,
     );
