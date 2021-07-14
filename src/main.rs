@@ -83,7 +83,7 @@ fn main() {
         "comask|exposurex6|cocatalogdb|backup|backup 1|doc|xls",
         "com.apple.mediaanalysisd|caches|database|com.apple.photoanalysisda|Cache|Thumbnails|resources|com.apple.mediaanalysisd|resources|private|Previews",
         args.dry,
-        40960,
+        10240,
     );
 
     process(args.src, &config);
