@@ -1,4 +1,5 @@
 use chrono::{DateTime, Datelike, Utc};
+use filetime::{set_file_mtime, FileTime};
 use std::collections::HashSet;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
@@ -114,39 +115,45 @@ fn process(source: std::path::PathBuf, config: &Config) {
             let ext = ext.unwrap();
 
             if config.image_extensions.contains(&ext) {
-                let size_of = source
+                let metadata = source
                     .metadata()
-                    .expect(&format!("Len expected {}", source.display()))
-                    .len();
+                    .expect(&format!("Len expected {}", source.display()));
+                let size_of = metadata.len();
 
                 if size_of < config.min_size {
                     println!("Size is too small {} {}", source.display(), size_of);
                     return;
                 }
-                if let Ok(dt) = fs::metadata(&source).and_then(|x| Ok(DateTime::<Utc>::from(SystemTime::UNIX_EPOCH + Duration::from_secs(x.mtime() as u64)))) {
-                    let mut pathname = config.destination.clone();
-                    pathname.push(dt.year().to_string());
-                    pathname.push(format!("{:02}", dt.month()));
-                    pathname.push(format!("{:02}", dt.day()));
-                    if !config.dry && !pathname.exists() {
-                        fs::create_dir_all(pathname.as_path())
-                            .expect(&format!("Unable to create {}", pathname.display()));
-                    }
-                    pathname.push(source.file_name().unwrap());
-                    if !pathname.exists() {
-                        if !config.dry {
-                            fs::copy(&source, &pathname).expect(&format!(
-                                "Unable to copy {} -> {}",
-                                source.display(),
-                                pathname.display()
-                            ));
-                            println!("Copy {} {}", source.display(), pathname.display())
-                        } else {
-                            println!("Would copy {} {}", source.display(), pathname.display())
+                let mt = FileTime::from_last_modification_time(&metadata);
+                let dt = DateTime::<Utc>::from(
+                    SystemTime::UNIX_EPOCH + Duration::from_secs(mt.unix_seconds() as u64),
+                );
+
+                let mut pathname = config.destination.clone();
+                pathname.push(dt.year().to_string());
+                pathname.push(format!("{:02}", dt.month()));
+                pathname.push(format!("{:02}", dt.day()));
+                if !config.dry && !pathname.exists() {
+                    fs::create_dir_all(pathname.as_path())
+                        .expect(&format!("Unable to create {}", pathname.display()));
+                }
+                pathname.push(source.file_name().unwrap());
+                if !pathname.exists() {
+                    if !config.dry {
+                        fs::copy(&source, &pathname).expect(&format!(
+                            "Unable to copy {} -> {}",
+                            source.display(),
+                            pathname.display()
+                        ));
+                        if let Some(e) = set_file_mtime(&pathname, mt).err() {
+                            println!("Error while {} {}", source.display(), e);
                         }
+                        println!("Copy {} {}", source.display(), pathname.display())
                     } else {
-                        println!("Skip {}", source.display())
+                        println!("Would copy {} {}", source.display(), pathname.display())
                     }
+                } else {
+                    println!("Skip {}", source.display())
                 }
             } else if config.other_extensions.contains(&ext) == false {
                 println!("Unknown {}", ext)
