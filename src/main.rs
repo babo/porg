@@ -5,6 +5,8 @@ use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::io::BufReader;
+use std::io::BufWriter;
 use std::time::{Duration, SystemTime};
 use structopt::StructOpt;
 
@@ -178,16 +180,20 @@ fn process(source: std::path::PathBuf, config: &Config) {
 }
 
 fn mycopy(from: &std::path::Path, to: &std::path::Path) -> io::Result<usize> {
-    let mut reader = File::open(from)?;
-    let metadata = reader.metadata()?;
+    let f = File::open(from)?;
+
+    let metadata = f.metadata()?;
     if !metadata.is_file() {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Not a file"));
     }
 
     let mut buffer = Vec::new();
+    let mut reader = BufReader::new(f);
     let len = reader.read_to_end(&mut buffer)?;
-    let mut writer = File::create(to)?;
+    let dest = File::create(to)?;
+    let mut writer = BufWriter::new(dest);
     writer.write_all(&mut buffer)?;
+    writer.flush()?;
 
     set_file_mtime(to, FileTime::from_last_modification_time(&metadata))?;
     Ok(len)
