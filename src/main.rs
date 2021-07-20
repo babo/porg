@@ -2,7 +2,9 @@ use chrono::{DateTime, Datelike, Utc};
 use filetime::{set_file_mtime, FileTime};
 use std::collections::HashSet;
 use std::fs;
-use std::os::unix::fs::MetadataExt;
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
 use std::time::{Duration, SystemTime};
 use structopt::StructOpt;
 
@@ -148,7 +150,7 @@ fn process(source: std::path::PathBuf, config: &Config) {
                 let exists = pathname.exists();
                 if config.overwrite || !exists {
                     if !config.dry {
-                        fs::copy(&source, &pathname).expect(&format!(
+                        mycopy(&source, &pathname).expect(&format!(
                             "Unable to copy {} -> {}",
                             source.display(),
                             pathname.display()
@@ -173,4 +175,20 @@ fn process(source: std::path::PathBuf, config: &Config) {
             }
         }
     }
+}
+
+fn mycopy(from: &std::path::Path, to: &std::path::Path) -> io::Result<usize> {
+    let mut reader = File::open(from)?;
+    let metadata = reader.metadata()?;
+    if !metadata.is_file() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Not a file"));
+    }
+
+    let mut buffer = Vec::new();
+    let len = reader.read_to_end(&mut buffer)?;
+    let mut writer = File::create(to)?;
+    writer.write_all(&mut buffer)?;
+
+    set_file_mtime(to, FileTime::from_last_modification_time(&metadata))?;
+    Ok(len)
 }
