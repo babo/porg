@@ -87,7 +87,7 @@ fn main() {
     let config = Config::new(
         args.dst,
         "afphoto|ai|arw|awf|awi|bmp|cr2|crw|dng|heic|jpe|jpeg|jpg|mkv|mov|mp4|mrw|mrw2|mts|nef|orf|pef|png|psd|raf|rw2|srw|tif|tiff|x3f",
-        "asd|backup|backup 1|cocatalogdb|comask|cos|cue|db|doc|exposurex6|gif|htm|ini|itc|itdb|itl|log|md5|nfo|on1|ovw|pdf|rtf|sfv|spd|spi|thm|trashed|txt|url|vbe|xls|xml|xmp",
+        "asd|backup|backup 1|cocatalogdb|comask|cos|cue|db|doc|exposurex6|gif|htm|ini|itc|itdb|itl|log|md5|nfo|on1|ovw|pdf|pp3|rtf|sfv|spd|spi|thm|trashed|txt|url|vbe|xls|xml|xmp",
         "Cache|Mobile Applications|Podcasts|Previews|Settings50|Thumbnails|Thumbs.db|caches|com.apple.mediaanalysisd|com.apple.photoanalysisda|database|private|resources",
         args.dry,
         args.overwrite,
