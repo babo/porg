@@ -14,6 +14,9 @@ struct Cli {
     #[structopt(short, long)]
     create: bool,
 
+    #[structopt(short, long)]
+    overwrite: bool,
+
     #[structopt(parse(from_os_str))]
     src: std::path::PathBuf,
 
@@ -28,6 +31,7 @@ struct Config {
     folders_to_skip: HashSet<String>,
     min_size: u64,
     dry: bool,
+    overwrite: bool,
 }
 
 impl Config {
@@ -37,6 +41,7 @@ impl Config {
         other: &str,
         folders: &str,
         dry: bool,
+        overwrite: bool,
         min_size: u64,
     ) -> Self {
         let image_extensions = image.split('|').map(|x| x.to_string()).collect();
@@ -45,11 +50,12 @@ impl Config {
 
         Config {
             destination,
-            dry,
             image_extensions,
             other_extensions,
             folders_to_skip,
             min_size,
+            dry,
+            overwrite,
         }
     }
 }
@@ -84,6 +90,7 @@ fn main() {
         "asd|backup|backup 1|cocatalogdb|comask|cos|cue|db|doc|exposurex6|gif|htm|ini|itc|itdb|itl|log|md5|nfo|on1|ovw|pdf|rtf|sfv|spd|spi|thm|trashed|txt|url|vbe|xls|xml|xmp",
         "Cache|Mobile Applications|Podcasts|Previews|Settings50|Thumbnails|Thumbs.db|caches|com.apple.mediaanalysisd|com.apple.photoanalysisda|database|private|resources",
         args.dry,
+        args.overwrite,
         10240,
     );
 
@@ -138,7 +145,8 @@ fn process(source: std::path::PathBuf, config: &Config) {
                         .expect(&format!("Unable to create {}", pathname.display()));
                 }
                 pathname.push(source.file_name().unwrap());
-                if !pathname.exists() {
+                let exists = pathname.exists();
+                if config.overwrite || !exists {
                     if !config.dry {
                         fs::copy(&source, &pathname).expect(&format!(
                             "Unable to copy {} -> {}",
@@ -148,7 +156,12 @@ fn process(source: std::path::PathBuf, config: &Config) {
                         if let Some(e) = set_file_mtime(&pathname, mt).err() {
                             println!("Error while {} {}", source.display(), e);
                         }
-                        println!("Copy {} {}", source.display(), pathname.display())
+                        println!(
+                            "{} {} {}",
+                            if exists { "Overwrite" } else { "Copy" },
+                            source.display(),
+                            pathname.display()
+                        )
                     } else {
                         println!("Would copy {} {}", source.display(), pathname.display())
                     }
