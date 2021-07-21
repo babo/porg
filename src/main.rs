@@ -22,7 +22,7 @@ struct Cli {
     overwrite: bool,
 
     #[structopt(parse(from_os_str))]
-    src: std::path::PathBuf,
+    src: Vec<std::path::PathBuf>,
 
     #[structopt(parse(from_os_str))]
     dst: std::path::PathBuf,
@@ -67,10 +67,6 @@ impl Config {
 fn main() {
     let args = Cli::from_args();
 
-    if !args.src.exists() {
-        panic!("Source doesn't exist: {}", args.src.display())
-    }
-
     if args.dst.exists() {
         if !args.dst.is_dir() {
             panic!("Destination is not a directory {}", args.dst.display())
@@ -98,7 +94,12 @@ fn main() {
         10240,
     );
 
-    process(args.src, &config);
+    for s in args.src {
+        if !s.exists() {
+            panic!("Source doesn't exist: {}", s.display())
+        }
+        process(s, &config);
+    }
 }
 
 fn process(source: std::path::PathBuf, config: &Config) {
